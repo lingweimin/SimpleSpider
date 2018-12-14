@@ -1,0 +1,8 @@
+*.sqlite
+*.pyc
+
+env
+__pycache__
+migrations
+
+
