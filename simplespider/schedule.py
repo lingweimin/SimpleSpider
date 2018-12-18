@@ -1,8 +1,10 @@
 from datetime import datetime, timedelta, time
 import re
-from time import sleep
+from time import sleep, ctime
 from simplespider.utils import singleton
 from .threadpool import ThreadPool
+from .config import *
+from .db import db
 
 
 class Plan:
@@ -41,6 +43,7 @@ class SinglePlan(Plan):
 
     def update(self, status=100):
         self.his = [(self.run_time, status)]
+        self.run_time = None
 
 
 class FreqPlan(Plan):
@@ -77,27 +80,36 @@ class FreqPlan(Plan):
 @singleton
 class Scheduler:
 
-    def __init__(self, period=60):
+    def __init__(self, period=15):
         self._tasks = []
         self.period = period
         self.threadpool = None
+        self.use_database = SCHEDULER_USE_DATABASE
+        self.db = db
 
     def __repr__(self):
         return '<{} object at {}>'.format(self.__class__.__name__, hex(id(self)))
 
     def run(self):
         self.threadpool = ThreadPool(len(self._tasks))
+        self.threadpool.debug = True
+        self.threadpool.run()
         while True:
-            print('Scheduler run')
             for task in self._tasks:
                 # task.start()
-                self._start_task(task)
+                if not task.is_running:
+                    self._start_task(task)
             sleep(self.period)
 
     def register_task(self, tasks):
         self._tasks.extend(tasks)
+        # if self.use_database:
+        #     for task in self._tasks:
+        #         db.Task.add(task)
 
     def _start_task(self, task):
-        if task.plan and task.plan.run_time < datetime.now():
+        if task.plan \
+                and task.plan.run_time \
+                and task.plan.run_time < datetime.now():
+            print('{} task {} (run time {}) start.'.format(ctime(), task.name, task.plan.run_time))
             self.threadpool.execute(name=task.name, runnable=task.start)
-

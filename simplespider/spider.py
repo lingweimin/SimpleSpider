@@ -7,6 +7,7 @@ from SimpleSpider.simplespider.schedule import FreqPlan, SinglePlan
 
 class Status:
     NEW = 0
+    RUNNING = 10
     COMPLETE = 100
     PAUSE = 101
     STOP = 102
@@ -57,6 +58,7 @@ class Spider:
 
     def start(self):
         try:
+            self.status = Status.RUNNING
             self.on_start()
             self.status = Status.COMPLETE
         except Exception as e:
@@ -65,6 +67,10 @@ class Spider:
         finally:
             self.plan.update(self.status)
 
+    @property
+    def is_running(self):
+        return self.status == Status.RUNNING
+
     def on_start(self):
         self.crawl(self.start_url, callback=self.index_page)
 
@@ -72,7 +78,7 @@ class Spider:
         raise NotImplementedError
 
     def crawl(self, url, callback):
-        print('{} {}'.format(callback.__name__, url))
+        # print('{} {}'.format(callback.__name__, url))
         self.current_url = url
         self.his_url.append(url)
         res = self._get_page(url)
